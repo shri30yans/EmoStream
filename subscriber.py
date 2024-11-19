@@ -3,6 +3,7 @@ import json
 import time
 import argparse
 
+print("Subscriber started")
 last_flush_time = time.time()
 
 parser = argparse.ArgumentParser()

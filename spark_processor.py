@@ -2,6 +2,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, window, count, first, from_json, when, lit, to_json, struct, collect_list
 from pyspark.sql.types import StructType, StructField, StringType, TimestampType
 
+print("Starting Spark application")
 
 spark = SparkSession.builder \
     .appName("RealTimeEmojiAggregator") \
@@ -60,6 +61,7 @@ kafka_query = final_output \
     .format("kafka") \
     .option("kafka.bootstrap.servers", 'localhost:9092') \
     .option("topic", 'emoji_topic_aggregated') \
+    .option("checkpointLocation", "/tmp/checkpoint") \
     .trigger(processingTime="2 seconds") \
     .start()
 

@@ -3,6 +3,8 @@ import json
 import time
 import argparse
 
+print("Cluster Publisher started")
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--publisher_topic', type=str, default='emoji_topic_aggregated_to_subscribers',

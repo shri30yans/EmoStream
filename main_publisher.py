@@ -3,6 +3,7 @@ import json
 import time
 import argparse
 
+print("Main Publisher started")
 last_flush_time = time.time()
 
 consumer = KafkaConsumer(
