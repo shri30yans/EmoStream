@@ -7,8 +7,6 @@ import json
 subscribers = set() 
 
 async def handle_client(websocket, path):
-    #reg new client 
-
     subscribers.add(websocket)
     try:
         while True:
@@ -24,7 +22,6 @@ async def broadcast_emoji_data(emoji_data):
     for websocket in subscribers:
         try: 
             await websocket.send(json.dumps(emoji_data))
-        # this func, sends in emoji data to all websocket clients 
         except websockets.exceptions.ConnectionClosed:
             subscribers.remove(websocket)
 

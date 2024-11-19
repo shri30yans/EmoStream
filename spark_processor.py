@@ -59,7 +59,7 @@ kafka_query = final_output \
     .outputMode("update") \
     .format("kafka") \
     .option("kafka.bootstrap.servers", 'localhost:9092') \
-    .option("topic", 'aggregated_emoji_topic') \
+    .option("topic", 'emoji_topic_aggregated') \
     .trigger(processingTime="2 seconds") \
     .start()
 

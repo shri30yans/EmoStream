@@ -5,7 +5,7 @@ import time
 last_flush_time = time.time()
 
 consumer = KafkaConsumer(
-    'emoji_topic_unbuffered',
+    'emoji_topic_aggregated',
     bootstrap_servers='localhost:9092',
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
 )
@@ -17,8 +17,7 @@ producer = KafkaProducer(
 
 for message in consumer:
     data = message.value
-    #print("Recived emoji_topic", data)
-    producer.send('emoji_topic', data)
+    producer.send('emoji_topic_aggregated_to_clusters', data)
     
     current_time = time.time()
     if current_time - last_flush_time >= 0.5: 
