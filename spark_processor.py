@@ -16,16 +16,16 @@ schema = StructType([
     StructField("timestamp", StringType(), True)
 ])
 
-kafka_stream = spark.readStream.format("kafka") \
+emoji_stream = spark.readStream.format("kafka") \
     .option("kafka.bootstrap.servers", 'localhost:9092') \
     .option("subscribe", 'client_emoji') \
     .load()
 
-parsed_stream = kafka_stream.select(from_json(col("value").cast("string"), schema).alias("data")).select("data.*")
+formated_emoji_stream = emoji_stream.select(from_json(col("value").cast("string"), schema).alias("data")).select("data.*")
 
-parsed_stream = parsed_stream.withColumn("event_time", col("timestamp").cast(TimestampType()))
+formated_emoji_stream = formated_emoji_stream.withColumn("event_time", col("timestamp").cast(TimestampType()))
 
-aggregated_stream = parsed_stream.groupBy(
+aggregated_emoji_stream = formated_emoji_stream.groupBy(
     window(col("event_time"), "10 seconds"), 
     col("emoji_type")
 ).agg(
@@ -52,7 +52,7 @@ aggregated_stream = parsed_stream.groupBy(
     col("emojis")
 )
 
-final_output = aggregated_stream.selectExpr("to_json(struct(*)) as value")
+final_output = aggregated_emoji_stream.selectExpr("to_json(struct(*)) as value")
 
 kafka_query = final_output \
     .writeStream \
@@ -60,7 +60,6 @@ kafka_query = final_output \
     .format("kafka") \
     .option("kafka.bootstrap.servers", 'localhost:9092') \
     .option("topic", 'aggregated_emoji_topic') \
-    .option("checkpointLocation", "/tmp/checkpoints") \
     .trigger(processingTime="2 seconds") \
     .start()
 
