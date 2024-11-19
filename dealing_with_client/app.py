@@ -11,10 +11,10 @@ async def handle_client(websocket, path):
     subscribers.add(websocket)
         while True:
             await asyncio.sleep(3600)  # Simulate active connection
-    except websockets.exceptions.ConnectionClosed:
-        pass
-    finally:
-        subscribers.remove(websocket)
+        except websockets.exceptions.ConnectionClosed:
+            pass
+        finally:
+            subscribers.remove(websocket)
 
 # Function to send emoji data to all connected WebSocket clients
 async def broadcast_emoji_data(emoji_data):
@@ -41,15 +41,6 @@ consumer = KafkaConsumer(
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
 )
 
-# Subscribers - in this case, we will broadcast to WebSocket clients
-# Note: You could define other subscribers here for specific logic or keep as is to broadcast to WebSocket clients.
-subscribers = [
-    lambda data: print(f"Subscriber 1 received: {data}"),
-    lambda data: print(f"Subscriber 2 received: {data}"),
-    lambda data: print(f"Subscriber 3 received: {data}")
-]
-
-# Consume messages from Kafka and broadcast them to WebSocket clients
 for message in consumer:
     aggregated_data = message.value
     print(f"Cluster Publisher received: {aggregated_data}")

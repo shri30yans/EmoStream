@@ -1,6 +1,14 @@
 from kafka import KafkaConsumer, KafkaProducer
 import json
 import time
+import argparse
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--publisher_topic', type=str, default='emoji_topic_aggregated_to_subscribers',
+                    help='Kafka topic to produce to')
+
+publisher_topic = parser.parse_args().publisher_topic
 
 last_flush_time = time.time()
 
@@ -17,5 +25,5 @@ producer = KafkaProducer(
 
 for message in consumer:
     data = message.value
-    producer.send('emoji_topic_aggregated_to_subscribers', data)
+    producer.send(publisher_topic, data)
     producer.flush()

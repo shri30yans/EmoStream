@@ -1,6 +1,7 @@
 from kafka import KafkaConsumer, KafkaProducer
 import json
 import time
+import argparse
 
 last_flush_time = time.time()
 
@@ -17,7 +18,7 @@ producer = KafkaProducer(
 
 for message in consumer:
     data = message.value
-    producer.send('emoji_topic_aggregated_to_clusters', data)
+    producer.send("emoji_topic_aggregated_to_clusters", data)
     
     current_time = time.time()
     if current_time - last_flush_time >= 0.5: 
