@@ -5,7 +5,7 @@ import time
 last_flush_time = time.time()
 
 consumer = KafkaConsumer(
-    'emoji_topic',
+    'emoji_topic_unbuffered',
     bootstrap_servers='localhost:9092',
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
 )
