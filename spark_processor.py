@@ -27,7 +27,7 @@ formated_emoji_stream = emoji_stream.select(from_json(col("value").cast("string"
 formated_emoji_stream = formated_emoji_stream.withColumn("event_time", col("timestamp").cast(TimestampType()))
 
 aggregated_emoji_stream = formated_emoji_stream.groupBy(
-    window(col("event_time"), "10 seconds"), 
+    window(col("event_time"), "2 seconds"), 
     col("emoji_type")
 ).agg(
     count("user_id").alias("raw_count")
