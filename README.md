@@ -1,8 +1,9 @@
-# LivePulse-Kafka-Spark — real-time reaction aggregation over an event-driven pipeline
+# StreamAgg-Spark — generic realtime stream aggregation platform
 
-A generic, horizontally scalable starter for **live audience reactions** (or any high-volume
-categorical event stream): ingest → Kafka → Spark micro-batch aggregation → Kafka fan-out →
-WebSocket delivery. Send tens of thousands of `{"user_id", "reaction", "timestamp"}` events per
+A generic, horizontally scalable starter for **high-volume categorical event streams**
+(live audience reactions, votes, clicks, sensor tags — anything shaped like
+`{"user_id", "reaction", "timestamp"}`): ingest → Kafka → Spark micro-batch
+aggregation → Kafka fan-out → WebSocket delivery. Send tens of thousands of events per
 second; every ~2 seconds each connected client receives one small aggregated window instead of a
 firehose of raw events.
 
@@ -16,10 +17,10 @@ firehose of raw events.
 ```mermaid
 flowchart LR
     C[Clients / load generator] -- POST /v1/reactions --> API[Ingest API\nFlask + buffered producer]
-    API -- livepulse.raw.v1 --> K[(Kafka)]
+    API -- streamagg.raw.v1 --> K[(Kafka)]
     K -- raw --> SPARK[Spark Structured Streaming\nwindow + count + downsample]
-    SPARK -- livepulse.agg.v1 --> MAIN[Main publisher]
-    MAIN -- livepulse.fanout.v1 --> CL1[Cluster publisher eu]
+    SPARK -- streamagg.agg.v1 --> MAIN[Main publisher]
+    MAIN -- streamagg.fanout.v1 --> CL1[Cluster publisher eu]
     MAIN --> CL2[Cluster publisher us]
     CL1 --> WS1[WebSocket bridge :8765]
     CL2 --> WS2[WebSocket bridge :8766]
@@ -31,10 +32,10 @@ flowchart LR
 
 | Stage | Code | In → Out |
 |---|---|---|
-| Ingest | `app/ingest_api.py` (+ `app/schemas.py`) | `POST /v1/reactions` → `livepulse.raw.v1` |
-| Aggregate | `streaming/spark_processor.py` (+ `streaming/aggregation.py`) | raw → `livepulse.agg.v1` (one JSON doc per window) |
-| Fan-out 1:N | `fanout/main_publisher.py` | agg → `livepulse.fanout.v1` |
-| Fan-out N:M | `fanout/cluster_publisher.py` | fan-out → `livepulse.fanout.v1.<cluster>` |
+| Ingest | `app/ingest_api.py` (+ `app/schemas.py`) | `POST /v1/reactions` → `streamagg.raw.v1` |
+| Aggregate | `streaming/spark_processor.py` (+ `streaming/aggregation.py`) | raw → `streamagg.agg.v1` (one JSON doc per window) |
+| Fan-out 1:N | `fanout/main_publisher.py` | agg → `streamagg.fanout.v1` |
+| Fan-out N:M | `fanout/cluster_publisher.py` | fan-out → `streamagg.fanout.v1.<cluster>` |
 | Push | `fanout/websocket_bridge.py` | cluster topic → WebSocket |
 
 Downsampling keeps viral spikes cheap: `DOWNSAMPLE_PER_UNIT=1000` means 2,500 raw `cheer`
@@ -99,8 +100,8 @@ See `.env.example`. Key knobs: `KAFKA_BOOTSTRAP_SERVERS`, `RAW/AGG/FANOUT_TOPIC`
 
 ## Scaling guide
 
-- **Ingest:** stateless — run N replicas behind a load balancer; raise `PRODUCER_QUEUE_MAX` and Kafka partitions on `livepulse.raw.v1`.
-- **Spark:** raise partitions to match cores; keep trigger == window; checkpoint on durable storage (default `/tmp/livepulse-checkpoint` is local-only).
+- **Ingest:** stateless — run N replicas behind a load balancer; raise `PRODUCER_QUEUE_MAX` and Kafka partitions on `streamagg.raw.v1`.
+- **Spark:** raise partitions to match cores; keep trigger == window; checkpoint on durable storage (default `/tmp/streamagg-checkpoint` is local-only).
 - **Fan-out:** one `cluster_publisher` + `websocket_bridge` pair per shard (region/venue/edge); consumers use distinct group ids per shard so each gets a full copy.
 - **Clients:** windows are idempotent per `(window_start, cluster_id)` — safe to reconnect and dedupe.
 
@@ -117,4 +118,4 @@ python -m pytest tests/ -q
 ## What was removed / fixed vs the prototype
 
 - Removed: course header/team branding, hardcoded league match + team names, streaming-vendor references, `dealing_with_client/` broken WebSocket experiments (syntax errors, `asyncio.run` inside the consume loop, calling a set as a function), `front/` wrong-endpoint UI with random fake counts masking failures, `web_sockets/` duplicate half-implemented bridge referencing an undefined handler, `run_script*.py` gnome-terminal-only launchers, infinite 200-thread load test with no exit, zero-byte placeholder file.
-- Fixed: per-request thread + blocking `flush()` → bounded buffer + timer flush; scattered hardcoded topics/ports → `config.py` + env; three disagreeing topic names → versioned `livepulse.*.v1`; `debug=True` → production-safe defaults; silent failures → 400/503 + structured logs + graceful SIGTERM handling.
+- Fixed: per-request thread + blocking `flush()` → bounded buffer + timer flush; scattered hardcoded topics/ports → `config.py` + env; three disagreeing topic names → versioned `streamagg.*.v1`; `debug=True` → production-safe defaults; silent failures → 400/503 + structured logs + graceful SIGTERM handling.

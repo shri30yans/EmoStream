@@ -18,11 +18,11 @@ import time
 
 import config
 
-log = logging.getLogger("livepulse.main_publisher")
+log = logging.getLogger("streamagg.main_publisher")
 
 
 def parse_args(argv=None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="LivePulse main publisher")
+    p = argparse.ArgumentParser(description="StreamAgg main publisher")
     p.add_argument("--bootstrap-servers", default=config.KAFKA_BOOTSTRAP_SERVERS)
     p.add_argument("--input-topic", default=config.AGG_EVENTS_TOPIC)
     p.add_argument("--output-topic", default=config.FANOUT_TOPIC)
@@ -54,7 +54,7 @@ def run() -> None:
         value_deserializer=lambda m: json.loads(m.decode("utf-8")),
         auto_offset_reset="latest",
         enable_auto_commit=True,
-        group_id="livepulse-main-publisher",
+        group_id="streamagg-main-publisher",
     )
     producer = KafkaProducer(
         bootstrap_servers=args.bootstrap_servers,

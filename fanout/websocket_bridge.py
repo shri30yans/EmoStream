@@ -13,7 +13,7 @@ Fixes vs the prototype:
   sockets on send failure instead of leaking them.
 
 Run:
-    python -m fanout.websocket_bridge [--topic livepulse.fanout.v1 --port 8765]
+    python -m fanout.websocket_bridge [--topic streamagg.fanout.v1 --port 8765]
 """
 
 from __future__ import annotations
@@ -26,11 +26,11 @@ import threading
 
 import config
 
-log = logging.getLogger("livepulse.ws_bridge")
+log = logging.getLogger("streamagg.ws_bridge")
 
 
 def parse_args(argv=None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="LivePulse Kafka->WebSocket bridge")
+    p = argparse.ArgumentParser(description="StreamAgg Kafka->WebSocket bridge")
     p.add_argument("--bootstrap-servers", default=config.KAFKA_BOOTSTRAP_SERVERS)
     p.add_argument("--topic", default=config.FANOUT_TOPIC)
     p.add_argument("--host", default=config.WS_HOST)
@@ -72,7 +72,7 @@ async def _serve(args: argparse.Namespace) -> None:
             value_deserializer=lambda m: json.loads(m.decode("utf-8")),
             auto_offset_reset="latest",
             enable_auto_commit=True,
-            group_id=f"livepulse-ws-{args.port}",
+            group_id=f"streamagg-ws-{args.port}",
         )
         for message in consumer:
             payload = json.dumps(message.value)

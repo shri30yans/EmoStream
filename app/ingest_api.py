@@ -26,7 +26,7 @@ from flask import Flask, jsonify, request
 import config
 from app.schemas import validate_reaction
 
-log = logging.getLogger("livepulse.ingest")
+log = logging.getLogger("streamagg.ingest")
 
 
 class BufferedProducer:

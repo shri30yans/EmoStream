@@ -17,11 +17,11 @@ import signal
 
 import config
 
-log = logging.getLogger("livepulse.cluster_publisher")
+log = logging.getLogger("streamagg.cluster_publisher")
 
 
 def parse_args(argv=None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="LivePulse cluster publisher")
+    p = argparse.ArgumentParser(description="StreamAgg cluster publisher")
     p.add_argument("--bootstrap-servers", default=config.KAFKA_BOOTSTRAP_SERVERS)
     p.add_argument("--input-topic", default=config.FANOUT_TOPIC)
     p.add_argument("--cluster-id", default="default")
@@ -58,7 +58,7 @@ def run() -> None:
         value_deserializer=lambda m: json.loads(m.decode("utf-8")),
         auto_offset_reset="latest",
         enable_auto_commit=True,
-        group_id=f"livepulse-cluster-{args.cluster_id}",
+        group_id=f"streamagg-cluster-{args.cluster_id}",
     )
     producer = KafkaProducer(
         bootstrap_servers=args.bootstrap_servers,

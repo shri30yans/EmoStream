@@ -41,7 +41,7 @@ def api_stats() -> dict:
 
 
 def main() -> None:
-    st.title("LivePulse-Kafka-Spark: live reaction demo")
+    st.title("StreamAgg-Spark: live reaction demo")
     event_title = st.text_input("Event title", "Demo Live Event")
     st.header(event_title)
 

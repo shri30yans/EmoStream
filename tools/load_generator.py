@@ -22,7 +22,7 @@ DEFAULT_REACTIONS = ["applause", "heart", "cheer", "wow", "fire"]
 
 
 def parse_args(argv=None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="LivePulse load generator")
+    p = argparse.ArgumentParser(description="StreamAgg load generator")
     p.add_argument("--base-url", default="http://localhost:5000")
     p.add_argument("--rps", type=float, default=100.0)
     p.add_argument("--workers", type=int, default=8)

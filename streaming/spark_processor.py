@@ -16,11 +16,11 @@ import logging
 
 import config
 
-log = logging.getLogger("livepulse.spark")
+log = logging.getLogger("streamagg.spark")
 
 
 def parse_args(argv=None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="LivePulse Kafka->Spark aggregator")
+    parser = argparse.ArgumentParser(description="StreamAgg Kafka->Spark aggregator")
     parser.add_argument("--bootstrap-servers", default=config.KAFKA_BOOTSTRAP_SERVERS)
     parser.add_argument("--input-topic", default=config.RAW_EVENTS_TOPIC)
     parser.add_argument("--output-topic", default=config.AGG_EVENTS_TOPIC)

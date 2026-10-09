@@ -22,7 +22,7 @@ class FakeProducer:
 @pytest.fixture()
 def client():
     producer = FakeProducer()
-    app = create_app(producer=producer, topic="livepulse.raw.v1")
+    app = create_app(producer=producer, topic="streamagg.raw.v1")
     app.config["TESTING"] = True
     with app.test_client() as c:
         c._fake_producer = producer  # type: ignore[attr-defined]
@@ -45,7 +45,7 @@ def test_ingest_accepts_valid_reaction(client):
     _drain(client)
     assert len(client._fake_producer.sent) == 1
     topic, event = client._fake_producer.sent[0]
-    assert topic == "livepulse.raw.v1"
+    assert topic == "streamagg.raw.v1"
     assert event["reaction"] == "cheer"
 
 

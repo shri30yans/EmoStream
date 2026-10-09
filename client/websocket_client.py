@@ -10,13 +10,13 @@ import argparse
 import asyncio
 import logging
 
-log = logging.getLogger("livepulse.ws_client")
+log = logging.getLogger("streamagg.ws_client")
 
 
 def parse_args(argv=None) -> argparse.Namespace:
     import config
 
-    p = argparse.ArgumentParser(description="LivePulse WebSocket listener")
+    p = argparse.ArgumentParser(description="StreamAgg WebSocket listener")
     p.add_argument("--url", default=f"ws://{config.WS_HOST}:{config.WS_PORT}")
     p.add_argument("--limit", type=int, default=0,
                    help="Stop after N messages (0 = forever).")

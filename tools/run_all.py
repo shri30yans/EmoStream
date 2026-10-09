@@ -20,7 +20,7 @@ PROCS: list[subprocess.Popen] = []
 
 
 def parse_args(argv=None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="LivePulse local runner")
+    p = argparse.ArgumentParser(description="StreamAgg local runner")
     p.add_argument("--with-spark", action="store_true",
                    help="Also launch the Spark streaming job.")
     p.add_argument("--with-load", action="store_true", default=True)
@@ -72,8 +72,8 @@ def main() -> None:
         spawn([sys.executable, "-m", "fanout.cluster_publisher",
                "--cluster-id", cluster], f"cluster-{cluster}")
         spawn([sys.executable, "-m", "fanout.websocket_bridge",
-               "--topic", f"livepulse.fanout.v1.{cluster}" if len(clusters) > 1
-               else "livepulse.fanout.v1",
+               "--topic", f"streamagg.fanout.v1.{cluster}" if len(clusters) > 1
+               else "streamagg.fanout.v1",
                "--port", str(ws_port)], f"ws-bridge-{cluster}")
         ws_port += 1
 

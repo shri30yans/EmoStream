@@ -1,4 +1,4 @@
-"""Single source of truth for LivePulse-Kafka-Spark configuration.
+"""Single source of truth for StreamAgg-Spark configuration.
 
 Every topic name, port, interval, and threshold is driven by environment
 variables with sane local defaults so the whole pipeline can be re-pointed
@@ -32,9 +32,9 @@ def _get_float(name: str, default: float) -> float:
 KAFKA_BOOTSTRAP_SERVERS: str = _get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
 # Topic names. Versioned (v1) so future schema changes don't collide.
-RAW_EVENTS_TOPIC: str = _get("RAW_EVENTS_TOPIC", "livepulse.raw.v1")
-AGG_EVENTS_TOPIC: str = _get("AGG_EVENTS_TOPIC", "livepulse.agg.v1")
-FANOUT_TOPIC: str = _get("FANOUT_TOPIC", "livepulse.fanout.v1")
+RAW_EVENTS_TOPIC: str = _get("RAW_EVENTS_TOPIC", "streamagg.raw.v1")
+AGG_EVENTS_TOPIC: str = _get("AGG_EVENTS_TOPIC", "streamagg.agg.v1")
+FANOUT_TOPIC: str = _get("FANOUT_TOPIC", "streamagg.fanout.v1")
 
 # Ingest API
 API_HOST: str = _get("API_HOST", "0.0.0.0")
@@ -48,8 +48,8 @@ WINDOW_SECONDS: int = _get_int("WINDOW_SECONDS", 2)
 # e.g. 1000 raw "fire" reactions in a window -> count 1 unit of "fire"
 # (x1000). Keeps fan-out payloads small during viral moments.
 DOWNSAMPLE_PER_UNIT: int = _get_int("DOWNSAMPLE_PER_UNIT", 1000)
-SPARK_CHECKPOINT_DIR: str = _get("SPARK_CHECKPOINT_DIR", "/tmp/livepulse-checkpoint")
-SPARK_APP_NAME: str = _get("SPARK_APP_NAME", "LivePulseKafkaSparkAggregator")
+SPARK_CHECKPOINT_DIR: str = _get("SPARK_CHECKPOINT_DIR", "/tmp/streamagg-checkpoint")
+SPARK_APP_NAME: str = _get("SPARK_APP_NAME", "StreamAggSparkAggregator")
 
 # Fan-out
 MAIN_PUBLISHER_FLUSH_SEC: float = _get_float("MAIN_PUBLISHER_FLUSH_SEC", 0.5)
