@@ -1,0 +1,2 @@
+# Spark job only. Keep separate so API/fan-out containers stay light.
+pyspark==3.5.3

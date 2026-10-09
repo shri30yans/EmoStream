@@ -1,48 +1,120 @@
-# EC-Team-74-emostream-concurrent-emoji-broadcast-over-event-driven-architecture
+# LivePulse-Kafka-Spark — real-time reaction aggregation over an event-driven pipeline
 
-# EmoStream: Concurrent Emoji Broadcast over Event-Driven Architecture
+A generic, horizontally scalable starter for **live audience reactions** (or any high-volume
+categorical event stream): ingest → Kafka → Spark micro-batch aggregation → Kafka fan-out →
+WebSocket delivery. Send tens of thousands of `{"user_id", "reaction", "timestamp"}` events per
+second; every ~2 seconds each connected client receives one small aggregated window instead of a
+firehose of raw events.
 
-## Project Overview
-EmoStream captures and broadcasts real-time emoji reactions from fans during live events, such as sporting matches, to reflect the collective sentiment of the audience. This system addresses the challenge of processing billions of emojis with low latency and high concurrency, creating an engaging and responsive viewer experience on platforms like Hotstar.
+> Renamed and rebuilt from a college emoji-broadcast prototype. All course-specific branding
+> (`EmoStream`, team IDs), vendor-specific copy (league/team names, streaming-provider references),
+> broken experiment folders, and placeholder files were removed. The legacy code is preserved on the
+> `backup/legacy-emostream` branch for reference.
 
-## Goal
-The primary objective of EmoStream is to design a horizontally scalable architecture that can process billions of user-generated emojis per second. Using an event-driven approach, EmoStream leverages frameworks such as **Apache Kafka** for efficient data streaming and **Apache Spark** for real-time processing, ensuring seamless delivery of real-time emoji aggregations back to the users.
+## Architecture
 
-## Architecture Overview
+```mermaid
+flowchart LR
+    C[Clients / load generator] -- POST /v1/reactions --> API[Ingest API\nFlask + buffered producer]
+    API -- livepulse.raw.v1 --> K[(Kafka)]
+    K -- raw --> SPARK[Spark Structured Streaming\nwindow + count + downsample]
+    SPARK -- livepulse.agg.v1 --> MAIN[Main publisher]
+    MAIN -- livepulse.fanout.v1 --> CL1[Cluster publisher eu]
+    MAIN --> CL2[Cluster publisher us]
+    CL1 --> WS1[WebSocket bridge :8765]
+    CL2 --> WS2[WebSocket bridge :8766]
+    WS1 --> B[Browsers / devices]
+    WS2 --> B
+```
 
-### 1. Receiving Emoji Data from Clients
-- **API Endpoint**: A lightweight HTTP endpoint (built with Flask or Express.js) receives POST requests containing user emoji data, including:
-  - **User ID**, **Emoji Type**, **Timestamp**
-- **Kafka Producer**: The data from the endpoint is sent asynchronously to a Kafka producer, which queues and flushes the data at 500-millisecond intervals to a Kafka broker.
+**Pipeline stages** (`config.py` is the single source of truth; every topic/interval/port is env-driven):
 
-### 2. Processing Emoji Data in Real-Time
-- **Data Aggregation**: A Kafka consumer continuously consumes emoji data from the Kafka broker, and **Apache Spark** processes it in micro-batches with a 2-second interval to provide real-time insights.
-- **Aggregation Algorithm**: Emojis are aggregated over each interval, condensing up to 1000 identical emojis into a single count to represent the volume of similar reactions, which reduces data size and improves response time.
+| Stage | Code | In → Out |
+|---|---|---|
+| Ingest | `app/ingest_api.py` (+ `app/schemas.py`) | `POST /v1/reactions` → `livepulse.raw.v1` |
+| Aggregate | `streaming/spark_processor.py` (+ `streaming/aggregation.py`) | raw → `livepulse.agg.v1` (one JSON doc per window) |
+| Fan-out 1:N | `fanout/main_publisher.py` | agg → `livepulse.fanout.v1` |
+| Fan-out N:M | `fanout/cluster_publisher.py` | fan-out → `livepulse.fanout.v1.<cluster>` |
+| Push | `fanout/websocket_bridge.py` | cluster topic → WebSocket |
 
-### 3. Broadcasting Processed Data to Clients
-- **Publisher-Subscriber Model**: EmoStream employs a Pub-Sub architecture for scaling to support numerous clients.
-  - **Main Publisher**: Receives processed emoji data from Spark and distributes it to cluster publishers.
-  - **Clusters**: Each cluster consists of a **Cluster Publisher** and multiple **Subscribers**.
-  - **Subscribers**: Clients are registered to specific subscribers to receive real-time emoji data updates, ensuring efficient load distribution and high concurrency.
+Downsampling keeps viral spikes cheap: `DOWNSAMPLE_PER_UNIT=1000` means 2,500 raw `cheer`
+reactions in a window ship as `{"reaction": "cheer", "count": 2, "raw_count": 2500}`.
 
-## Final Deliverables
-- **API Endpoint**: An endpoint to receive emoji POST requests from clients and queue them in Kafka.
-- **Kafka Producer**: Sends buffered emoji data to Kafka at regular 500-millisecond intervals.
-- **Spark Streaming Job**: Processes emoji data in 2-second micro-batches with aggregation to optimize data flow.
-- **Pub-Sub System**: A scalable Pub-Sub model supporting numerous clients with real-time updates.
-- **Testing**:
-  - **Unit Tests**: For API endpoints and message queue reliability.
-  - **Load Tests**: To confirm system performance under high concurrency.
+## Quickstart
 
-## Demo Overview
-1. Multiple clients send emoji data to the API endpoint in real-time.
-2. Kafka producer asynchronously queues emojis and flushes them to Kafka broker.
-3. Spark processes data in 2-second intervals, aggregates emoji counts, and passes results to the main publisher.
-4. The Pub-Sub architecture distributes aggregated data back to clients through cluster publishers and subscribers, providing a seamless experience.
+```bash
+cp .env.example .env            # optional; defaults work locally
+pip install -r requirements.txt
+# Spark job only:
+pip install -r requirements-spark.txt
 
-## References
-- [Hotstar’s Architecture for Live Streaming](https://highscalability.com/capturing-a-billion-emo-j-i-ons/)
-- [Building Scalable Pub-Sub Systems](https://newsletter.systemdesign.one/p/hotstar-architecture)
-- [YouTube: ByteByteGo on Event-Driven Architecture](https://www.youtube.com/watch?v=UN1kW5AHid4)
+make up                            # Kafka on localhost:9092
+make api                           # ingest on :5000 (health: GET /healthz)
+make spark                         # in another terminal (needs Java + Spark)
+make main                          # agg -> fanout forwarder
+make cluster bridge                # CLUSTER=default shard + WS :8765
+make load RPS=100 DURATION=30      # smoke traffic
+python client/websocket_client.py  # watch aggregated windows
+```
 
-EmoStream offers a high-performance, event-driven solution for handling real-time user-generated content, transforming user reactions into a dynamic display of crowd sentiment in live broadcast experiences.
+Or supervise the non-Spark stages in one terminal:
+
+```bash
+python tools/run_all.py --with-load --clusters default --load-rps 50
+```
+
+Demo UI (generic — type any event title, no hardcoded fixtures):
+
+```bash
+streamlit run client/demo_frontend.py
+```
+
+## API
+
+`POST /v1/reactions` → `202 {"status": "accepted"}` (legacy alias `POST /send_emoji` kept).
+
+```json
+{ "user_id": "user123", "reaction": "applause", "timestamp": "2026-10-09T12:00:00Z" }
+```
+
+- `reaction` also accepts the legacy `emoji_type` key; `timestamp` accepts ISO-8601 or epoch seconds.
+- `400` on validation failure, `503` when the broker/buffer is unavailable — never a fake success.
+- `GET /healthz` → `{"status": "ok", "kafka": "up"}`; `GET /v1/stats` → ingest counters.
+
+Aggregated window example on Kafka/WS:
+
+```json
+{
+  "window_start": "2026-10-09T12:00:00.000Z",
+  "window_end": "2026-10-09T12:00:02.000Z",
+  "reactions": "[{\"reaction\":\"cheer\",\"count\":2,\"raw_count\":2500}]",
+  "cluster_id": "eu"
+}
+```
+
+## Configuration
+
+See `.env.example`. Key knobs: `KAFKA_BOOTSTRAP_SERVERS`, `RAW/AGG/FANOUT_TOPIC`,
+`WINDOW_SECONDS`, `DOWNSAMPLE_PER_UNIT`, `PRODUCER_FLUSH_INTERVAL_SEC`, `WS_PORT`.
+
+## Scaling guide
+
+- **Ingest:** stateless — run N replicas behind a load balancer; raise `PRODUCER_QUEUE_MAX` and Kafka partitions on `livepulse.raw.v1`.
+- **Spark:** raise partitions to match cores; keep trigger == window; checkpoint on durable storage (default `/tmp/livepulse-checkpoint` is local-only).
+- **Fan-out:** one `cluster_publisher` + `websocket_bridge` pair per shard (region/venue/edge); consumers use distinct group ids per shard so each gets a full copy.
+- **Clients:** windows are idempotent per `(window_start, cluster_id)` — safe to reconnect and dedupe.
+
+## Tests
+
+```bash
+python -m pytest tests/ -q
+```
+
+- `test_schemas.py` — validation rules, legacy alias, timestamp normalization.
+- `test_ingest_api.py` — Flask test client + fake producer (no broker needed).
+- `test_aggregation_logic.py` — downsampling math and window sorting without Spark.
+
+## What was removed / fixed vs the prototype
+
+- Removed: course header/team branding, hardcoded league match + team names, streaming-vendor references, `dealing_with_client/` broken WebSocket experiments (syntax errors, `asyncio.run` inside the consume loop, calling a set as a function), `front/` wrong-endpoint UI with random fake counts masking failures, `web_sockets/` duplicate half-implemented bridge referencing an undefined handler, `run_script*.py` gnome-terminal-only launchers, infinite 200-thread load test with no exit, zero-byte placeholder file.
+- Fixed: per-request thread + blocking `flush()` → bounded buffer + timer flush; scattered hardcoded topics/ports → `config.py` + env; three disagreeing topic names → versioned `livepulse.*.v1`; `debug=True` → production-safe defaults; silent failures → 400/503 + structured logs + graceful SIGTERM handling.
